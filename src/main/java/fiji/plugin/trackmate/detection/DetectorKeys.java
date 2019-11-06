@@ -105,6 +105,8 @@ public class DetectorKeys
 	 * </ul>
 	 */
 	public static final String KEY_DO_SUBPIXEL_LOCALIZATION = "DO_SUBPIXEL_LOCALIZATION";
+        
+        public static final String KEY_SELECTED_FILTER="SELECTED_FILTER";
 
 	/** A default value for the {@link #KEY_DO_SUBPIXEL_LOCALIZATION} parameter. */
 	public static final boolean DEFAULT_DO_SUBPIXEL_LOCALIZATION = true;

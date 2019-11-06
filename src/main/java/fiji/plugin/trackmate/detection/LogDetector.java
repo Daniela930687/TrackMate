@@ -6,6 +6,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import fiji.plugin.trackmate.Spot;
+import fiji.plugin.trackmate.detection.util.Filter;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccessible;
 import net.imglib2.algorithm.MultiThreaded;
@@ -21,177 +22,230 @@ import net.imglib2.util.Util;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-public class LogDetector< T extends RealType< T > & NativeType< T >> implements SpotDetector< T >, MultiThreaded
-{
+public class LogDetector< T extends RealType< T> & NativeType< T>> implements SpotDetector< T>, MultiThreaded {
 
-	/*
+    /*
 	 * FIELDS
-	 */
+     */
+    private final static String BASE_ERROR_MESSAGE = "LogDetector: ";
 
-	private final static String BASE_ERROR_MESSAGE = "LogDetector: ";
+    /**
+     * The image to segment. Will not modified.
+     */
+    protected RandomAccessible< T> img;
 
-	/** The image to segment. Will not modified. */
-	protected RandomAccessible< T > img;
+    protected double radius;
 
-	protected double radius;
+    protected double threshold;
 
-	protected double threshold;
+    protected boolean doSubPixelLocalization;
 
-	protected boolean doSubPixelLocalization;
+    protected boolean doMedianFilter;
 
-	protected boolean doMedianFilter;
+    protected String baseErrorMessage;
 
-	protected String baseErrorMessage;
+    protected String errorMessage;
 
-	protected String errorMessage;
+    /**
+     * The list of {@link Spot} that will be populated by this detector.
+     */
+    protected List< Spot> spots = new ArrayList<>();
 
-	/** The list of {@link Spot} that will be populated by this detector. */
-	protected List< Spot > spots = new ArrayList<>();
+    /**
+     * The processing time in ms.
+     */
+    protected long processingTime;
 
-	/** The processing time in ms. */
-	protected long processingTime;
+    protected int numThreads;
 
-	protected int numThreads;
+    protected final Interval interval;
 
-	protected final Interval interval;
+    protected final double[] calibration;
 
-	protected final double[] calibration;
+    protected final Filter filter;
 
-	/*
+    /*
 	 * CONSTRUCTORS
-	 */
+     */
+    public LogDetector(final RandomAccessible< T> img, final Interval interval, final double[] calibration, final double radius, final double threshold, final boolean doSubPixelLocalization, final boolean doMedianFilter) {
+        this.img = img;
+        this.interval = DetectionUtils.squeeze(interval);
+        this.calibration = calibration;
+        this.radius = radius;
+        this.threshold = threshold;
+        this.doSubPixelLocalization = doSubPixelLocalization;
+        this.doMedianFilter = doMedianFilter;
+        this.baseErrorMessage = BASE_ERROR_MESSAGE;
+        this.filter = Filter.NO_FILTER;
+        setNumThreads();
+    }
 
-	public LogDetector( final RandomAccessible< T > img, final Interval interval, final double[] calibration, final double radius, final double threshold, final boolean doSubPixelLocalization, final boolean doMedianFilter )
-	{
-		this.img = img;
-		this.interval = DetectionUtils.squeeze( interval );
-		this.calibration = calibration;
-		this.radius = radius;
-		this.threshold = threshold;
-		this.doSubPixelLocalization = doSubPixelLocalization;
-		this.doMedianFilter = doMedianFilter;
-		this.baseErrorMessage = BASE_ERROR_MESSAGE;
-		setNumThreads();
-	}
+    public LogDetector(final RandomAccessible< T> img, final Interval interval, final double[] calibration, final double radius, final double threshold, final boolean doSubPixelLocalization, final Filter filter) {
+        this.img = img;
+        this.interval = DetectionUtils.squeeze(interval);
+        this.calibration = calibration;
+        this.radius = radius;
+        this.threshold = threshold;
+        this.doSubPixelLocalization = doSubPixelLocalization;
+        this.doMedianFilter = doMedianFilter;
+        this.baseErrorMessage = BASE_ERROR_MESSAGE;
+        this.filter = filter;
+        setNumThreads();
+    }
 
-	/*
+
+    /*
 	 * METHODS
-	 */
+     */
+    @Override
+    public boolean checkInput() {
+        if (null == img) {
+            errorMessage = baseErrorMessage + "Image is null.";
+            return false;
+        }
+        if (img.numDimensions() > 3) {
+            errorMessage = baseErrorMessage + "Image must be 1D, 2D or 3D, got " + img.numDimensions() + "D.";
+            return false;
+        }
+        return true;
+    }
 
-	@Override
-	public boolean checkInput()
-	{
-		if ( null == img )
-		{
-			errorMessage = baseErrorMessage + "Image is null.";
-			return false;
-		}
-		if ( img.numDimensions() > 3 )
-		{
-			errorMessage = baseErrorMessage + "Image must be 1D, 2D or 3D, got " + img.numDimensions() + "D.";
-			return false;
-		}
-		return true;
-	}
+    @Override
+    public boolean process() {
+        final long start = System.currentTimeMillis();
 
-	@Override
-	public boolean process()
-	{
-		final long start = System.currentTimeMillis();
-
-		/*
+        /*
 		 * Copy to float for convolution.
-		 */
+         */
+        final ImgFactory< FloatType> factory = Util.getArrayOrCellImgFactory(interval, new FloatType());
+        Img< FloatType> floatImg = DetectionUtils.copyToFloatImg(img, interval, factory);
 
-		final ImgFactory< FloatType > factory = Util.getArrayOrCellImgFactory( interval, new FloatType() );
-		Img< FloatType > floatImg = DetectionUtils.copyToFloatImg( img, interval, factory );
-
-		/*
+        /*
 		 * Do median filtering (or not).
-		 */
+         */
+        
+        switch (filter) {
+            case ANISOTROPIC_DIFUSION_2D:
+                floatImg = DetectionUtils.applyAnisotropicDifusion2DFilter(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
+            case BILATERAL:
+                floatImg = DetectionUtils.applyBilateralFilter(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
+            case BW_GUIED:
+                floatImg = DetectionUtils.applyBwGuidedFilter(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
+            case IMPROVED_PROPAGATED:
+                floatImg = DetectionUtils.applyImprovedPropagatedFilter(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
+            case MEDIAN:
+                floatImg = DetectionUtils.applyMedianFilter(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
+            case ROF_FILTER:
+                floatImg = DetectionUtils.applyROFFilter(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
 
-		if ( doMedianFilter )
-		{
-			floatImg = DetectionUtils.applyMedianFilter( floatImg );
-			if ( null == floatImg )
-			{
-				errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
-				return false;
-			}
-		}
+        }
 
+      /*    if (doMedianFilter) {
+            floatImg = DetectionUtils.applyMedianFilter(floatImg);
+            if (null == floatImg) {
+                errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                return false;
+            }
+        }*/
+        // Squeeze singleton dimensions
+        int ndims = interval.numDimensions();
+        for (int d = 0; d < interval.numDimensions(); d++) {
+            if (interval.dimension(d) <= 1) {
+                ndims--;
+            }
+        }
 
-		// Squeeze singleton dimensions
-		int ndims = interval.numDimensions();
-		for ( int d = 0; d < interval.numDimensions(); d++ )
-			if ( interval.dimension( d ) <= 1 )
-				ndims--;
+        final Img< FloatType> kernel = DetectionUtils.createLoGKernel(radius, ndims, calibration);
+        final FFTConvolution< FloatType> fftconv = new FFTConvolution<>(floatImg, kernel);
 
-		final Img< FloatType > kernel = DetectionUtils.createLoGKernel( radius, ndims, calibration );
-		final FFTConvolution< FloatType > fftconv = new FFTConvolution<>( floatImg, kernel );
-
-		/*
+        /*
 		 * Determine the right img factory for FFT calculation.
-		 */
-		Interval fftinterval = floatImg;
-		for ( int d = 0; d < kernel.numDimensions(); d++ )
-			fftinterval = Intervals.expand( fftinterval, kernel.dimension( d ), d );
-		final ImgFactory< ComplexFloatType > imgFactory = Util.getArrayOrCellImgFactory( fftinterval, new ComplexFloatType() );
-		fftconv.setFFTImgFactory( imgFactory );
+         */
+        Interval fftinterval = floatImg;
+        for (int d = 0; d < kernel.numDimensions(); d++) {
+            fftinterval = Intervals.expand(fftinterval, kernel.dimension(d), d);
+        }
+        final ImgFactory< ComplexFloatType> imgFactory = Util.getArrayOrCellImgFactory(fftinterval, new ComplexFloatType());
+        fftconv.setFFTImgFactory(imgFactory);
 
-		final ExecutorService service = Executors.newFixedThreadPool(numThreads);
-		fftconv.setExecutorService(service);
+        final ExecutorService service = Executors.newFixedThreadPool(numThreads);
+        fftconv.setExecutorService(service);
 
-		fftconv.convolve();
-		service.shutdown();
+        fftconv.convolve();
+        service.shutdown();
 
-		final long[] minopposite = new long[ interval.numDimensions() ];
-		interval.min( minopposite );
-		for ( int d = 0; d < minopposite.length; d++ )
-			minopposite[ d ] = -minopposite[ d ];
+        final long[] minopposite = new long[interval.numDimensions()];
+        interval.min(minopposite);
+        for (int d = 0; d < minopposite.length; d++) {
+            minopposite[d] = -minopposite[d];
+        }
 
-		final IntervalView< FloatType > to = Views.offset( floatImg, minopposite );
-		spots = DetectionUtils.findLocalMaxima( to, threshold, calibration, radius, doSubPixelLocalization, numThreads );
+        final IntervalView< FloatType> to = Views.offset(floatImg, minopposite);
+        spots = DetectionUtils.findLocalMaxima(to, threshold, calibration, radius, doSubPixelLocalization, numThreads);
 
-		final long end = System.currentTimeMillis();
-		this.processingTime = end - start;
+        final long end = System.currentTimeMillis();
+        this.processingTime = end - start;
 
-		return true;
-	}
+        return true;
+    }
 
-	@Override
-	public List< Spot > getResult()
-	{
-		return spots;
-	}
+    @Override
+    public List< Spot> getResult() {
+        return spots;
+    }
 
-	@Override
-	public String getErrorMessage()
-	{
-		return errorMessage;
-	}
+    @Override
+    public String getErrorMessage() {
+        return errorMessage;
+    }
 
-	@Override
-	public long getProcessingTime()
-	{
-		return processingTime;
-	}
+    @Override
+    public long getProcessingTime() {
+        return processingTime;
+    }
 
-	@Override
-	public void setNumThreads()
-	{
-		this.numThreads = Runtime.getRuntime().availableProcessors();
-	}
+    @Override
+    public void setNumThreads() {
+        this.numThreads = Runtime.getRuntime().availableProcessors();
+    }
 
-	@Override
-	public void setNumThreads( final int numThreads )
-	{
-		this.numThreads = numThreads;
-	}
+    @Override
+    public void setNumThreads(final int numThreads) {
+        this.numThreads = numThreads;
+    }
 
-	@Override
-	public int getNumThreads()
-	{
-		return numThreads;
-	}
+    @Override
+    public int getNumThreads() {
+        return numThreads;
+    }
 }

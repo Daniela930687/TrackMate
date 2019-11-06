@@ -34,8 +34,10 @@ import fiji.plugin.trackmate.Settings;
 import fiji.plugin.trackmate.Spot;
 import fiji.plugin.trackmate.SpotCollection;
 import fiji.plugin.trackmate.TrackMate;
+import static fiji.plugin.trackmate.detection.DetectorKeys.KEY_SELECTED_FILTER;
 import fiji.plugin.trackmate.detection.LogDetectorFactory;
 import fiji.plugin.trackmate.detection.SpotDetectorFactory;
+import fiji.plugin.trackmate.detection.util.Filter;
 import fiji.plugin.trackmate.gui.ConfigurationPanel;
 import fiji.plugin.trackmate.gui.TrackMateGUIController;
 import fiji.plugin.trackmate.gui.panels.components.JNumericTextField;
@@ -43,6 +45,7 @@ import fiji.plugin.trackmate.util.JLabelLogger;
 import fiji.util.NumberParser;
 import ij.ImagePlus;
 import ij.measure.Calibration;
+import javax.swing.JComboBox;
 
 /**
  * Configuration panel for spot detectors based on LoG detector.
@@ -102,12 +105,16 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 	protected final ImagePlus imp;
 
 	protected final Model model;
+        
+     //   protected JComboBox filtrosCombo; 
 
 	private Logger localLogger;
 
 	/** The layout in charge of laying out this panel content. */
 	protected SpringLayout layout;
 
+        protected JComboBox jComboBoxFilter;
+        
 	protected final Settings settings;
 
 	/*
@@ -153,13 +160,16 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 		final int targetChannel = sliderChannel.getValue();
 		final double expectedRadius = NumberParser.parseDouble( jTextFieldBlobDiameter.getText() ) / 2;
 		final double threshold = NumberParser.parseDouble( jTextFieldThreshold.getText() );
-		final boolean useMedianFilter = jCheckBoxMedianFilter.isSelected();
+//		final boolean useMedianFilter = jCheckBoxMedianFilter.isSelected();
 		final boolean doSubPixelLocalization = jCheckSubPixel.isSelected();
+                final Filter selectedFilter=(Filter)jComboBoxFilter.getSelectedItem();
+                
 		lSettings.put( KEY_TARGET_CHANNEL, targetChannel );
 		lSettings.put( KEY_RADIUS, expectedRadius );
 		lSettings.put( KEY_THRESHOLD, threshold );
-		lSettings.put( KEY_DO_MEDIAN_FILTERING, useMedianFilter );
+	//	lSettings.put( KEY_DO_MEDIAN_FILTERING, useMedianFilter );
 		lSettings.put( KEY_DO_SUBPIXEL_LOCALIZATION, doSubPixelLocalization );
+                lSettings.put(KEY_SELECTED_FILTER,selectedFilter);
 		return lSettings;
 	}
 
@@ -184,7 +194,7 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 			radius = Math.max( radius / pw, 1.5 ) * pw;
 		}
 		jTextFieldBlobDiameter.setText( "" + ( 2 * radius ) );
-		jCheckBoxMedianFilter.setSelected( ( Boolean ) settings.get( KEY_DO_MEDIAN_FILTERING ) );
+		//jCheckBoxMedianFilter.setSelected( ( Boolean ) settings.get( KEY_DO_MEDIAN_FILTERING ) );
 		jTextFieldThreshold.setText( "" + settings.get( KEY_THRESHOLD ) );
 		jCheckSubPixel.setSelected( ( Boolean ) settings.get( KEY_DO_SUBPIXEL_LOCALIZATION ) );
 	}
@@ -335,8 +345,20 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 				this.add( jLabelBlobDiameterUnit );
 				jLabelBlobDiameterUnit.setFont( FONT );
 				jLabelBlobDiameterUnit.setText( spaceUnits );
-			}
-			{
+			}{
+                                jComboBoxFilter = new JComboBox();
+				layout.putConstraint( SpringLayout.NORTH, jComboBoxFilter, 312, SpringLayout.NORTH, this );
+				layout.putConstraint( SpringLayout.WEST, jComboBoxFilter, 11, SpringLayout.WEST, this );
+				layout.putConstraint( SpringLayout.SOUTH, jComboBoxFilter, 333, SpringLayout.NORTH, this );
+				layout.putConstraint( SpringLayout.EAST, jComboBoxFilter, 241, SpringLayout.WEST, this );
+				this.add( jComboBoxFilter );
+                                for(Filter filter:Filter.values()){
+                                    jComboBoxFilter.addItem(filter);
+                                }
+				jComboBoxFilter.setFont( FONT );
+                         }
+			/*
+                        {
 				jCheckBoxMedianFilter = new JCheckBox();
 				layout.putConstraint( SpringLayout.NORTH, jCheckBoxMedianFilter, 312, SpringLayout.NORTH, this );
 				layout.putConstraint( SpringLayout.WEST, jCheckBoxMedianFilter, 11, SpringLayout.WEST, this );
@@ -346,6 +368,8 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 				jCheckBoxMedianFilter.setText( "Use median filter " );
 				jCheckBoxMedianFilter.setFont( FONT );
 			}
+                        
+                        */
 			{
 				jLabelHelpText = new JLabel();
 				layout.putConstraint( SpringLayout.NORTH, jLabelHelpText, 60, SpringLayout.NORTH, this );
@@ -358,9 +382,9 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 			}
 			{
 				jLabelThreshold = new JLabel();
-				layout.putConstraint( SpringLayout.NORTH, jLabelThreshold, -42, SpringLayout.NORTH, jCheckBoxMedianFilter );
+				layout.putConstraint( SpringLayout.NORTH, jLabelThreshold, -42, SpringLayout.NORTH, jComboBoxFilter );
 				layout.putConstraint( SpringLayout.WEST, jLabelThreshold, 16, SpringLayout.WEST, this );
-				layout.putConstraint( SpringLayout.SOUTH, jLabelThreshold, -29, SpringLayout.NORTH, jCheckBoxMedianFilter );
+				layout.putConstraint( SpringLayout.SOUTH, jLabelThreshold, -29, SpringLayout.NORTH, jComboBoxFilter );
 				layout.putConstraint( SpringLayout.EAST, jLabelThreshold, 162, SpringLayout.WEST, this );
 				this.add( jLabelThreshold );
 				jLabelThreshold.setText( "Threshold:" );

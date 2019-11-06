@@ -40,6 +40,8 @@ import org.scijava.plugin.Plugin;
 
 import fiji.plugin.trackmate.Model;
 import fiji.plugin.trackmate.Settings;
+import static fiji.plugin.trackmate.detection.DetectorKeys.KEY_SELECTED_FILTER;
+import fiji.plugin.trackmate.detection.util.Filter;
 import fiji.plugin.trackmate.gui.ConfigurationPanel;
 import fiji.plugin.trackmate.gui.panels.detector.LogDetectorConfigurationPanel;
 import fiji.plugin.trackmate.util.TMUtils;
@@ -131,12 +133,12 @@ public class LogDetectorFactory< T extends RealType< T > & NativeType< T >> impl
 	{
 		final double radius = ( Double ) settings.get( KEY_RADIUS );
 		final double threshold = ( Double ) settings.get( KEY_THRESHOLD );
-		final boolean doMedian = ( Boolean ) settings.get( KEY_DO_MEDIAN_FILTERING );
+		final Filter filter = ( Filter ) settings.get( KEY_SELECTED_FILTER );
 		final boolean doSubpixel = ( Boolean ) settings.get( KEY_DO_SUBPIXEL_LOCALIZATION );
 		final double[] calibration = TMUtils.getSpatialCalibration( img );
 		final RandomAccessible< T > imFrame = prepareFrameImg( frame );
 
-		final LogDetector< T > detector = new LogDetector<>( imFrame, interval, calibration, radius, threshold, doSubpixel, doMedian );
+		final LogDetector< T > detector = new LogDetector<>( imFrame, interval, calibration, radius, threshold, doSubpixel, filter );
 		detector.setNumThreads( 1 );
 		return detector;
 	}
@@ -161,14 +163,15 @@ public class LogDetectorFactory< T extends RealType< T > & NativeType< T >> impl
 		ok = ok & checkParameter( lSettings, KEY_TARGET_CHANNEL, Integer.class, errorHolder );
 		ok = ok & checkParameter( lSettings, KEY_RADIUS, Double.class, errorHolder );
 		ok = ok & checkParameter( lSettings, KEY_THRESHOLD, Double.class, errorHolder );
-		ok = ok & checkParameter( lSettings, KEY_DO_MEDIAN_FILTERING, Boolean.class, errorHolder );
+		//ok = ok & checkParameter( lSettings, KEY_DO_MEDIAN_FILTERING, Boolean.class, errorHolder );
 		ok = ok & checkParameter( lSettings, KEY_DO_SUBPIXEL_LOCALIZATION, Boolean.class, errorHolder );
 		final List< String > mandatoryKeys = new ArrayList<>();
 		mandatoryKeys.add( KEY_TARGET_CHANNEL );
 		mandatoryKeys.add( KEY_RADIUS );
 		mandatoryKeys.add( KEY_THRESHOLD );
-		mandatoryKeys.add( KEY_DO_MEDIAN_FILTERING );
+	//	mandatoryKeys.add( KEY_DO_MEDIAN_FILTERING );
 		mandatoryKeys.add( KEY_DO_SUBPIXEL_LOCALIZATION );
+                mandatoryKeys.add( KEY_SELECTED_FILTER );
 		ok = ok & checkMapKeys( lSettings, mandatoryKeys, null, errorHolder );
 		if ( !ok )
 		{
@@ -198,7 +201,7 @@ public class LogDetectorFactory< T extends RealType< T > & NativeType< T >> impl
 		ok = ok & readDoubleAttribute( element, lSettings, KEY_RADIUS, errorHolder );
 		ok = ok & readDoubleAttribute( element, lSettings, KEY_THRESHOLD, errorHolder );
 		ok = ok & readBooleanAttribute( element, lSettings, KEY_DO_SUBPIXEL_LOCALIZATION, errorHolder );
-		ok = ok & readBooleanAttribute( element, lSettings, KEY_DO_MEDIAN_FILTERING, errorHolder );
+		//ok = ok & readBooleanAttribute( element, lSettings, KEY_DO_MEDIAN_FILTERING, errorHolder );
 		ok = ok & readIntegerAttribute( element, lSettings, KEY_TARGET_CHANNEL, errorHolder );
 		if ( !ok )
 		{

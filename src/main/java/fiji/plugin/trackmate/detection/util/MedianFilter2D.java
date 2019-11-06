@@ -1,5 +1,6 @@
 package fiji.plugin.trackmate.detection.util;
 
+import ij.gui.GenericDialog;
 import java.util.Arrays;
 
 import net.imglib2.Cursor;
@@ -51,10 +52,30 @@ public class MedianFilter2D< T extends RealType< T > & NativeType< T >> extends 
 	 *            determines the size of the neighborhood. In 2D or 3D, a radius
 	 *            of 1 will generate a 3x3 neighborhood.
 	 */
+        static int nb_iter      =20;    // Number of iterations
+    static int nb_smoothings=1;     // Number of smoothings per iteration
+    static double dt        =20.0;  // Adapting time step
+    static double a1         =0.5f;  // Diffusion limiter along minimal variations
+    static double a2         =0.9f;  // Diffusion limiter along maximal variations
+    static int save         =20;    // Iteration saving step
+    static boolean sstats   =false; // display xdt value in each iteration
+    static boolean tstats   =false; // measure needed runtime
+    static boolean add_labels   =false; // add labels to output stack
+    static double edgeheight =5;     // edge threshold
+
 	public MedianFilter2D( final RandomAccessibleInterval< T > source, final int radius )
 	{
 		this.source = source;
 		this.radius = radius;
+                 GenericDialog gd=new GenericDialog("2D Anisotropic Diffusion Tschumperle-Deriche v");
+        gd.addNumericField("Number of iterations",nb_iter,0);
+        gd.addNumericField("Smoothings per iteration",nb_smoothings,0);
+        gd.addNumericField("a1(Diffusion limiter along minimal variations)",a1,2);
+        gd.addNumericField("a2(Diffusion limiter along maximal variations)",a2,2);
+        gd.addNumericField("dt(Time step)",dt,1);
+        gd.addNumericField("edge threshold rheight",edgeheight,1);
+                
+            
 	}
 
 	@Override
