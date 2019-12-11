@@ -123,7 +123,6 @@ public class LogDetector< T extends RealType< T> & NativeType< T>> implements Sp
         /*
 		 * Do median filtering (or not).
          */
-        
         switch (filter) {
             case ANISOTROPIC_DIFUSION_2D:
                 floatImg = DetectionUtils.applyAnisotropicDifusion2DFilter(floatImg);
@@ -167,10 +166,24 @@ public class LogDetector< T extends RealType< T> & NativeType< T>> implements Sp
                     return false;
                 }
                 break;
+            case K_SVD_FILTER:
+                floatImg = DetectionUtils.applyK_SVD(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
+            case NON_LOCAL_MEANS:
+                floatImg = DetectionUtils.applyNonLocalMeans(floatImg);
+                if (null == floatImg) {
+                    errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";
+                    return false;
+                }
+                break;
 
         }
 
-      /*    if (doMedianFilter) {
+        /*    if (doMedianFilter) {
             floatImg = DetectionUtils.applyMedianFilter(floatImg);
             if (null == floatImg) {
                 errorMessage = BASE_ERROR_MESSAGE + "Failed to apply median filter.";

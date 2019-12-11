@@ -5,6 +5,7 @@
  */
 package fiji.plugin.trackmate.filters;
 
+import fiji.plugin.trackmate.detection.DetectionUtils;
 import ij.IJ;
 import ij.WindowManager;
 import ij.gui.GenericDialog;
@@ -23,9 +24,15 @@ public class BwGuiedFilter< T extends RealType< T > & NativeType< T >> extends B
     private int sr=8;// Sigma Rango
     
     private Img< T> output;
+        final RandomAccessibleInterval< T> input;
     
     public BwGuiedFilter(final RandomAccessibleInterval< T > source) {
-         inputParametersGui();
+           input=source;
+        if (!DetectionUtils.filterApplied){
+             DetectionUtils.filterApplied=true;
+           inputParametersGui(); 
+          
+        }
     }
 
     

@@ -13,6 +13,8 @@ import fiji.plugin.trackmate.filters.AnisotropicDifusion2DFilter;
 import fiji.plugin.trackmate.filters.BilateralFilter;
 import fiji.plugin.trackmate.filters.BwGuiedFilter;
 import fiji.plugin.trackmate.filters.ImprovedPropagatedFilter;
+import fiji.plugin.trackmate.filters.K_SVD_Filter;
+import fiji.plugin.trackmate.filters.NonLocalMeansFilter;
 import fiji.plugin.trackmate.filters.ROFFilter;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -54,6 +56,10 @@ public class DetectionUtils {
      * array.
      * @return a new image containing the LoG kernel.
      */
+    
+   public static boolean filterApplied=false;
+
+    
     public static final Img< FloatType> createLoGKernel(final double radius, final int nDims, final double[] calibration) {
         // Optimal sigma for LoG approach and dimensionality.
         final double sigma = radius / Math.sqrt(nDims);
@@ -215,6 +221,21 @@ public class DetectionUtils {
             return null;
         }
         return rOFFilter.getResult();
+    }
+    
+      public static final < R extends RealType< R> & NativeType< R>> Img< R> applyK_SVD(final RandomAccessibleInterval< R> image) {
+        final K_SVD_Filter< R> ksvdf = new K_SVD_Filter<>(image);
+        if (!ksvdf.checkInput() || !ksvdf.process()) {
+            return null;
+        }
+        return ksvdf.getResult();
+    }
+        public static final < R extends RealType< R> & NativeType< R>> Img< R> applyNonLocalMeans(final RandomAccessibleInterval< R> image) {
+        final NonLocalMeansFilter< R> nonLocalMeansFilter = new NonLocalMeansFilter<>(image);
+        if (!nonLocalMeansFilter.checkInput() || !nonLocalMeansFilter.process()) {
+            return null;
+        }
+        return nonLocalMeansFilter.getResult();
     }
 
     public static final List< Spot> findLocalMaxima(final RandomAccessibleInterval< FloatType> source, final double threshold, final double[] calibration, final double radius, final boolean doSubPixelLocalization, final int numThreads) {

@@ -5,6 +5,7 @@
  */
 package fiji.plugin.trackmate.filters;
 
+import fiji.plugin.trackmate.detection.DetectionUtils;
 import ij.gui.GenericDialog;
 import net.imglib2.Cursor; //Valores de toda la imagen original
 import net.imglib2.IterableInterval;
@@ -39,8 +40,11 @@ public class BilateralFilter< T extends RealType< T> & NativeType< T>> extends B
     int sr = 10;// Sigma Rango
 
     public BilateralFilter(final RandomAccessibleInterval< T> source) {
-        this.source = source;
-        inputParametersGui();
+         this.source=source;
+        if (!DetectionUtils.filterApplied){
+           DetectionUtils.filterApplied=true;
+           inputParametersGui(); 
+        }
  
     }
 

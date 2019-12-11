@@ -5,6 +5,7 @@
  */
 package fiji.plugin.trackmate.filters;
 
+import fiji.plugin.trackmate.detection.DetectionUtils;
 import ij.ImagePlus;
 import ij.ImageStack;
 import net.imglib2.RandomAccessibleInterval;
@@ -38,45 +39,10 @@ public class AnisotropicDifusion2DFilter< T extends RealType< T> & NativeType< T
     
     public AnisotropicDifusion2DFilter(final RandomAccessibleInterval< T> source) {
         input=source;
-        inputParametersGui();
+ 
+        
     }
 
-    public void parametrosDeEntrada() {
-
-        GenericDialog gd = new GenericDialog("2D Anisotropic Diffusion Tschumperle-Deriche v");
-        gd.addNumericField("Number of iterations", nb_iter, 0);
-        gd.addNumericField("Smoothings per iteration", nb_smoothings, 0);
-        gd.addNumericField("a1(Diffusion limiter along minimal variations)", a1, 2);
-        gd.addNumericField("a2(Diffusion limiter along maximal variations)", a2, 2);
-        gd.addNumericField("dt(Time step)", dt, 1);
-        gd.addNumericField("edge threshold rheight", edgeheight, 1);
-        String[] labels = {"Show_filter stats", "Show_time stats", "Add labels"};
-        boolean[] values = {sstats, tstats, add_labels};
-        gd.addCheckboxGroup(2, 2, labels, values);
-        gd.addMessage("Incorrect values will be replaced by defaults.\nLabels are drawn in the foreground color.\nPress Esc to stop processing.");
-        gd.showDialog();
-        // the user presses the Cancel button
-        if (gd.wasCanceled()) {
-
-        }
-        nb_iter = (int) gd.getNextNumber();
-        if (nb_iter < 1) {
-            nb_iter = 1;
-        }
-        nb_smoothings = (int) gd.getNextNumber();
-        if (nb_smoothings < 1) {
-            nb_smoothings = 1;
-        }
-
-        a1 = (double) gd.getNextNumber();
-        a2 = (double) gd.getNextNumber();
-        dt = (double) gd.getNextNumber();
-        edgeheight = (double) gd.getNextNumber();
-        sstats = (boolean) gd.getNextBoolean();
-        tstats = (boolean) gd.getNextBoolean();
-        add_labels = (boolean) gd.getNextBoolean();
-
-    }
 
     @Override
     public boolean checkInput() {
@@ -85,7 +51,11 @@ public class AnisotropicDifusion2DFilter< T extends RealType< T> & NativeType< T
 
     @Override
     public boolean process() {
-        
+        if (!DetectionUtils.filterApplied){
+             DetectionUtils.filterApplied=true;
+           inputParametersGui(); 
+          
+        }
  
                 
         ImagePlus imp = ImageJFunctions.wrap( input,"" );

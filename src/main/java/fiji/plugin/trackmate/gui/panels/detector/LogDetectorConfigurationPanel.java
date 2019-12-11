@@ -34,6 +34,7 @@ import fiji.plugin.trackmate.Settings;
 import fiji.plugin.trackmate.Spot;
 import fiji.plugin.trackmate.SpotCollection;
 import fiji.plugin.trackmate.TrackMate;
+import fiji.plugin.trackmate.detection.DetectionUtils;
 import static fiji.plugin.trackmate.detection.DetectorKeys.KEY_SELECTED_FILTER;
 import fiji.plugin.trackmate.detection.LogDetectorFactory;
 import fiji.plugin.trackmate.detection.SpotDetectorFactory;
@@ -52,7 +53,7 @@ import javax.swing.JComboBox;
  * 
  * @author Jean-Yves Tinevez &lt;jeanyves.tinevez@gmail.com&gt; 2010 - 2014
  */
-public class LogDetectorConfigurationPanel extends ConfigurationPanel
+    public class LogDetectorConfigurationPanel extends ConfigurationPanel
 {
 
 	private static final long serialVersionUID = 1L;
@@ -146,6 +147,7 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 		this.detectorName = detectorName;
 		this.model = model;
 		this.spaceUnits = model.getSpaceUnits();
+                DetectionUtils.filterApplied=false;
 		initGUI();
 	}
 
@@ -267,6 +269,7 @@ public class LogDetectorConfigurationPanel extends ConfigurationPanel
 				model.setSpots( model.getSpots(), true );
 
 				btnPreview.setEnabled( true );
+                                DetectionUtils.filterApplied=false;
 
 			}
 		}.start();

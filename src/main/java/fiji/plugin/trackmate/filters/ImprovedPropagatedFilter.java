@@ -5,6 +5,7 @@
  */
 package fiji.plugin.trackmate.filters;
 
+import fiji.plugin.trackmate.detection.DetectionUtils;
 import ij.ImagePlus;
 import ij.gui.GenericDialog;
 import ij.process.ImageProcessor;
@@ -26,9 +27,12 @@ public class ImprovedPropagatedFilter< T extends RealType< T> & NativeType< T>> 
     final RandomAccessibleInterval< T> input;
 
     public ImprovedPropagatedFilter(final RandomAccessibleInterval< T> source) {
-        input = source;
-        inputParametersGui();
-
+               input=source;
+        if (!DetectionUtils.filterApplied){
+                DetectionUtils.filterApplied=true;
+           inputParametersGui(); 
+       
+        }
     }
 
     @Override
